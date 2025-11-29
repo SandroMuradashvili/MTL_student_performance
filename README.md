@@ -1,81 +1,71 @@
-Multi-Task Learning on Student Performance Dataset
-1. Introduction
+# Multi-Task Learning: Student Performance Prediction
 
-This project implements a two-headed MLP for predicting two outcomes from the UCI Student Performance Dataset:
+This project explores multi-task learning (MTL) with a two-headed MLP to predict **students' final grades (G3)** and **romantic status** from the UCI Student Performance Dataset.
 
-G3: Final grade (regression)
+## 1. Overview
 
-Romantic: Whether the student is in a romantic relationship (classification)
+The network handles **two tasks simultaneously**:
 
-The shared "body" learns a common representation, while each head specializes in its task.
+1. **Regression Task:** Predict the final grade (G3) of a student.  
+2. **Classification Task:** Predict whether the student is in a romantic relationship (`yes`/`no`).
 
-2. Data Preprocessing
+The network shares a **common feature extractor ("body")** and has **two separate heads** for each task.
 
-Categorical features were one-hot encoded.
+## 2. Data Preprocessing
 
-Numerical features were standardized.
+- Loaded `student-por.csv`.  
+- Categorical features → one-hot encoding.  
+- Numerical features → standardized.  
+- Split dataset into **train, validation, test** (~75% / 13% / 12%).  
+- Created **PyTorch Dataset and DataLoader**.
 
-Data split into train, validation, and test sets.
+## 3. Model Architecture
 
-3. Model Architecture
+- **Shared Body:** 2 fully-connected layers with BatchNorm, ReLU, Dropout.  
+- **Grade Head (Regression):** 1 hidden layer → 1 output.  
+- **Romantic Head (Classification):** 1 hidden layer → 2 output logits.  
 
-Shared Body: Two linear layers + ReLU + batch normalization + dropout
+## 4. Training
 
-Head 1: Regression output for G3
+- Losses:
+  - **MSELoss** for grades.  
+  - **CrossEntropyLoss** for romantic status.  
+- Weighted loss: `total_loss = alpha * grade_loss + (1 - alpha) * romantic_loss`.  
+- Optimizer: **Adam** (lr=0.001).  
+- Epochs: 30, batch size: 32.  
 
-Head 2: Classification output for romantic status
+### Hyperparameter Experiments
 
-4. Training
+- High `alpha` (~0.8, 0.5, 0.2):
+  - MAE for grades good.  
+  - F1 for romantic low (~0.06–0.17).  
 
-Loss functions:
+- Low `alpha` (~0.05, 0.01):
+  - MAE slightly worse (~2.5).  
+  - F1 improved (~0.43).
 
-MSE for G3
+## 5. Experiments
 
-CrossEntropyLoss for romantic
+- Tested **network shapes**, **hidden sizes**, **dropout**, **batch size**, **learning rate**, and **loss weightings**.  
+- **Observation:** Romantic status is hard to predict with available data. Best F1 ~0.4333 with `alpha=0.005`, MAE ~2.5.
 
-Weighted multi-task loss:
+## 6. Evaluation Metrics
 
-total_loss = alpha * loss_G3 + (1 - alpha) * loss_romantic
+- **Grades:** MAE  
+- **Romantic status:** Accuracy, F1-score ("yes" class)
 
+## 7. Example Results
 
-Optimizer: Adam, adjustable learning rate
+| Alpha  | MAE (G3) | Accuracy (Romantic) | F1 (Yes) |
+|--------|----------|-------------------|-----------|
+| 0.8    | 1.6550   | 0.6410            | 0.0667    |
+| 0.5    | 2.0723   | 0.6154            | 0.0000    |
+| 0.2    | 1.8844   | 0.6026            | 0.1143    |
+| 0.05   | 2.5000   | 0.5641            | 0.4333    |
 
-Epochs: 30, Batch size: 32
+## 8. Conclusion
 
-5. Hyperparameter Exploration
+- Multi-task learning predicts grades well.  
+- Romantic status prediction remains difficult.  
+- Small `alpha` values improve F1-score without majorly worsening grade MAE.
 
-We tried adjusting:
-
-Model size (neurons in shared body and heads)
-
-Data splits
-
-Batch size and learning rate
-
-Weighted loss coefficient alpha
-
-Observation: Despite tuning, dataset features do not allow reliable prediction of romantic status. G3 prediction is robust.
-
-6. Results
-Effect of alpha
-alpha	MAE (G3)	Accuracy (Romantic)	F1 (Romantic=Yes)
-0.8	1.65	0.641	0.0667
-0.5	2.07	0.615	0.0
-0.2	1.88	0.602	0.1143
-0.05	2.5	0.564	0.4333
-
-Interpretation:
-
-High alpha → prioritizes G3, suppresses romantic learning.
-
-Very low alpha → improves F1 for romantic, small trade-off in G3.
-
-Best observed F1: 0.4333 with alpha=0.05
-
-7. Conclusion
-
-Multi-task learning works well for G3 prediction.
-
-Romantic status prediction is limited by dataset features.
-
-Weighted loss with very low alpha balances the two tasks effectively.
